@@ -1,5 +1,5 @@
 // Connect to server (io comes from CDN)
-const socket = io("http://localhost:3000", {
+const socket = io("https://voice-call-socket-io.onrender.com", {
   transports: ["websocket"],
   upgrade: false,
 });
