@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Audio Chat App</title>
+
+  <!-- Socket.IO CDN -->
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #1d2671, #c33764);
+      color: white;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .card {
+      background: rgba(0, 0, 0, 0.4);
+      padding: 25px 30px;
+      border-radius: 12px;
+      width: 320px;
+      text-align: center;
+      box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+    }
+
+    h1 {
+      margin-bottom: 10px;
+      font-size: 24px;
+    }
+
+    .status {
+      margin: 15px 0;
+      font-size: 14px;
+      color: #00ff99;
+    }
+
+    button {
+      background: #00ff99;
+      border: none;
+      padding: 12px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: bold;
+      transition: 0.2s;
+    }
+
+    button:hover {
+      background: #00cc77;
+    }
+
+    footer {
+      margin-top: 15px;
+      font-size: 12px;
+      opacity: 0.8;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="card">
+    <h1>🎙️ Audio Chat</h1>
+
+    <p>Live Voice Streaming</p>
+
+    <div class="status" id="status">
+      Connecting...
+    </div>
+
+    <button id="micBtn">Enable Microphone</button>
+
+    <footer>
+      Powered by Socket.IO
+    </footer>
+  </div>
+
+  <!-- Your Script -->
+  <script src="script.js"></script>
+
+  <script>
+    const statusText = document.getElementById("status");
+    const micBtn = document.getElementById("micBtn");
+
+    micBtn.addEventListener("click", () => {
+      statusText.innerText = "🎧 Microphone Active";
+      micBtn.disabled = true;
+      micBtn.innerText = "Mic Enabled";
+    });
+  </script>
+</body>
+</html>
