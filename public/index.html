@@ -1,123 +1,23 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Audio Chat App - Pro</title>
-  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-  <style>
-    body {
-      margin: 0;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: linear-gradient(135deg, #1d2671, #c33764);
-      color: white;
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-direction: column;
-    }
-
-    .card {
-      background: rgba(0, 0, 0, 0.6);
-      padding: 30px;
-      border-radius: 16px;
-      width: 360px;
-      text-align: center;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-      backdrop-filter: blur(8px);
-    }
-
-    h1 { margin: 0 0 10px 0; font-size: 26px; }
-    p { margin: 0 0 20px 0; opacity: 0.8; font-size: 14px; }
-
-    .status {
-      margin: 15px 0;
-      font-size: 14px;
-      font-weight: bold;
-      min-height: 20px;
-    }
-
-    .visualizer-container {
-        width: 100%;
-        height: 60px;
-        background: rgba(0,0,0,0.3);
-        border-radius: 8px;
-        margin: 15px 0;
-        overflow: hidden;
-    }
-
-    canvas {
-        width: 100%;
-        height: 100%;
-        display: block;
-    }
-
-    .users-panel {
-        background: rgba(255,255,255,0.1);
-        border-radius: 8px;
-        padding: 10px;
-        margin-bottom: 15px;
-        text-align: left;
-        max-height: 100px;
-        overflow-y: auto;
-    }
-
-    .user-item {
-        font-size: 12px;
-        padding: 4px;
-        border-bottom: 1px solid rgba(255,255,255,0.1);
-    }
-    .user-item:last-child { border-bottom: none; }
-
-    button {
-      background: #00ff99;
-      border: none;
-      padding: 14px 24px;
-      border-radius: 50px;
-      cursor: pointer;
-      font-size: 16px;
-      font-weight: 800;
-      color: #1d2671;
-      transition: all 0.2s;
-      box-shadow: 0 4px 15px rgba(0, 255, 153, 0.4);
-      width: 100%;
-    }
-
-    button:hover {
-      background: #00cc77;
-      transform: translateY(-2px);
-    }
-
-    button:active {
-        transform: translateY(0);
-    }
-
-    footer { margin-top: 20px; font-size: 11px; opacity: 0.6; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>WebRTC Voice Chat</title>
+<script src="/socket.io/socket.io.js"></script>
+<style>
+body{font-family:Arial;background:#111;color:#fff;text-align:center;padding:40px}
+.card{max-width:420px;margin:auto;background:#222;padding:20px;border-radius:12px}
+button{padding:10px 18px;margin:10px}
+</style>
 </head>
 <body>
-  <div class="card">
-    <h1>🎙️ Pro Voice Chat</h1>
-    <p>Low Latency | Real-time Visualizer</p>
-
-    <div class="status" id="status">Initializing...</div>
-
-    <div class="visualizer-container">
-        <canvas id="visualizer" width="300" height="60"></canvas>
-    </div>
-
-    <div class="users-panel" id="usersList">
-        <!-- Users will appear here -->
-    </div>
-
-    <button id="micBtn">Enable Microphone</button>
-
-    <footer>
-      Powered by Socket.IO & Web Audio API
-    </footer>
-  </div>
-
-  <script src="script.js"></script>
+<div class="card">
+<h2>🎤 WebRTC Voice Chat</h2>
+<p id="users">Users: 0</p>
+<p id="status">Disconnected</p>
+<button id="mute">Mute</button>
+</div>
+<script src="script.js"></script>
 </body>
 </html>

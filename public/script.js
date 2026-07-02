@@ -1,148 +1,76 @@
-const socket = io("https://voice-call-socket-io.onrender.com", {
-  transports: ["websocket"],
-  upgrade: false,
-});
+const socket=io();
 
-// State
 let localStream;
-let mediaRecorder;
-let audioContext;
-let analyser;
-let microphone;
-let dataArray;
-let isMuted = false;
-let remoteAudioSources = {}; // Map socketId -> AudioBufferSourceNode
+let peers={};
 
-// UI Elements
-const statusText = document.getElementById("status");
-const micBtn = document.getElementById("micBtn");
-const usersList = document.getElementById("usersList");
-const canvas = document.getElementById("visualizer");
-const canvasCtx = canvas.getContext("2d");
+const cfg={iceServers:[{urls:"stun:stun.l.google.com:19302"}]};
 
-// Initialize Audio Context (must be user triggered)
-async function initAudio() {
-    try {
-        localStream = await navigator.mediaDevices.getUserMedia({ 
-            audio: { 
-                echoCancellation: true, 
-                noiseSuppression: true, 
-                autoGainControl: true 
-            } 
-        });
+socket.on("connect",()=>document.getElementById("status").textContent="Connected");
+socket.on("user-count",c=>document.getElementById("users").textContent="Users: "+c);
 
-        // Setup Visualizer
-        audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        analyser = audioContext.createAnalyser();
-        analyser.fftSize = 256;
-        microphone = audioContext.createMediaStreamSource(localStream);
-        microphone.connect(analyser);
-        
-        const bufferLength = analyser.frequencyBinCount;
-        dataArray = new Uint8Array(bufferLength);
-        drawVisualizer();
+navigator.mediaDevices.getUserMedia({
+ audio:{
+  echoCancellation:true,
+  noiseSuppression:true,
+  autoGainControl:true
+ }
+}).then(stream=>{
+ localStream=stream;
+});
 
-        // Setup Recorder for Streaming (Raw PCM/Opus chunks)
-        // Using a small chunk size (20ms) for low latency
-        mediaRecorder = new MediaRecorder(localStream, {
-            mimeType: 'audio/webm;codecs=opus'
-        });
+async function createPeer(id){
+ const pc=new RTCPeerConnection(cfg);
+ peers[id]=pc;
 
-        mediaRecorder.ondataavailable = (event) => {
-            if (event.data.size > 0 && !isMuted) {
-                // Convert Blob to ArrayBuffer for efficient binary transfer
-                const reader = new FileReader();
-                reader.readAsArrayBuffer(event.data);
-                reader.onloadend = () => {
-                    socket.emit('audioChunk', reader.result);
-                };
-            }
-        };
+ localStream.getTracks().forEach(t=>pc.addTrack(t,localStream));
 
-        // Record 20ms chunks (approx 480 samples at 24kHz)
-        mediaRecorder.start(20); 
+ pc.onicecandidate=e=>{
+   if(e.candidate){
+      socket.emit("ice-candidate",{target:id,candidate:e.candidate});
+   }
+ };
 
-        micBtn.innerText = "🔇 Mute";
-        micBtn.style.background = "#ff4444";
-        statusText.innerText = "🟢 Live & Listening";
+ pc.ontrack=e=>{
+   let a=document.getElementById("audio-"+id);
+   if(!a){
+      a=document.createElement("audio");
+      a.id="audio-"+id;
+      a.autoplay=true;
+      document.body.appendChild(a);
+   }
+   a.srcObject=e.streams[0];
+ };
 
-    } catch (err) {
-        console.error("Error accessing microphone:", err);
-        statusText.innerText = "❌ Microphone Access Denied";
-        statusText.style.color = "#ff4444";
-    }
+ return pc;
 }
 
-// Toggle Mute
-micBtn.addEventListener("click", () => {
-    isMuted = !isMuted;
-    if (isMuted) {
-        micBtn.innerText = "🔊 Unmute";
-        micBtn.style.background = "#00ff99";
-        statusText.innerText = "🔇 Muted";
-        socket.emit('muteStatus', { id: socket.id, isMuted: true });
-    } else {
-        micBtn.innerText = "🔇 Mute";
-        micBtn.style.background = "#ff4444";
-        statusText.innerText = "🟢 Live & Listening";
-        socket.emit('muteStatus', { id: socket.id, isMuted: false });
-    }
+socket.on("peers",async ids=>{
+ for(const id of ids){
+   const pc=await createPeer(id);
+   const offer=await pc.createOffer();
+   await pc.setLocalDescription(offer);
+   socket.emit("offer",{target:id,offer});
+ }
 });
 
-// Handle Incoming Audio (Binary Buffer)
-socket.on('audioChunk', (buffer) => {
-    if (!audioContext) return;
-
-    // Decode audio data to play it
-    audioContext.decodeAudioData(buffer, (buffer) => {
-        const source = audioContext.createBufferSource();
-        source.buffer = buffer;
-        // Connect to destination (speakers)
-        source.connect(audioContext.destination);
-        source.start();
-    }, (e) => console.error("Error decoding audio data", e));
+socket.on("offer",async({offer,from})=>{
+ const pc=await createPeer(from);
+ await pc.setRemoteDescription(offer);
+ const answer=await pc.createAnswer();
+ await pc.setLocalDescription(answer);
+ socket.emit("answer",{target:from,answer});
 });
 
-// Handle User List Updates
-socket.on('updateUsers', (users) => {
-    usersList.innerHTML = '';
-    users.forEach(userId => {
-        if (userId !== socket.id) {
-            const div = document.createElement('div');
-            div.className = 'user-item';
-            div.innerText = `User ${userId.substring(0, 4)}...`;
-            usersList.appendChild(div);
-        }
-    });
-    if(users.length <= 1) {
-        usersList.innerHTML = '<div class="user-item">No other users online</div>';
-    }
+socket.on("answer",async({answer,from})=>{
+ await peers[from].setRemoteDescription(answer);
 });
 
-// Visualizer Loop
-function drawVisualizer() {
-    requestAnimationFrame(drawVisualizer);
-    analyser.getByteFrequencyData(dataArray);
-
-    canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
-    const barWidth = (canvas.width / dataArray.length) * 2.5;
-    let barHeight;
-    let x = 0;
-
-    for (let i = 0; i < dataArray.length; i++) {
-        barHeight = dataArray[i] / 2;
-        canvasCtx.fillStyle = `rgb(${barHeight + 100}, 50, 100)`;
-        canvasCtx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
-        x += barWidth + 1;
-    }
-}
-
-socket.on('connect', () => {
-    statusText.innerText = "Connecting...";
-    initAudio();
+socket.on("ice-candidate",async({candidate,from})=>{
+ if(peers[from]) await peers[from].addIceCandidate(candidate);
 });
 
-socket.on('disconnect', () => {
-    statusText.innerText = "Disconnected from server";
-    statusText.style.color = "#ff4444";
-});
+document.getElementById("mute").onclick=()=>{
+ const t=localStream.getAudioTracks()[0];
+ t.enabled=!t.enabled;
+ document.getElementById("mute").textContent=t.enabled?"Mute":"Unmute";
+};
